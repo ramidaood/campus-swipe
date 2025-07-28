@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Heart, MapPin, Trash2 } from "lucide-react";
+import { Heart, MapPin, Trash2, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +24,17 @@ const Favorites = () => {
       {/* Header */}
       <div className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="px-4 py-4">
-          <h1 className="text-2xl font-bold text-foreground">My Favorites</h1>
+          <div className="flex items-center gap-2 mb-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => navigate("/")}
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold text-foreground">My Favorites</h1>
+          </div>
           <p className="text-muted-foreground text-sm">
             {likedApartments.length} apartment{likedApartments.length !== 1 ? 's' : ''} saved
           </p>

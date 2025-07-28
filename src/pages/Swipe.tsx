@@ -1,14 +1,18 @@
 import { useState } from "react";
-import { Heart, X, MapPin, Camera } from "lucide-react";
+import { Heart, X, MapPin, Camera, ArrowLeft } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { demoApartments } from "@/data/demoData";
 import { useNavigate } from "react-router-dom";
 
 const Swipe = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [likedApartments, setLikedApartments] = useState<string[]>([]);
+  const [showImageCarousel, setShowImageCarousel] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const navigate = useNavigate();
 
   const currentApartment = demoApartments[currentIndex];
@@ -44,7 +48,17 @@ const Swipe = () => {
       <div className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="px-4 py-4">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-foreground">Discover</h1>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate("/")}
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back
+              </Button>
+              <h1 className="text-2xl font-bold text-foreground">Discover</h1>
+            </div>
             <div className="text-sm text-muted-foreground">
               {currentIndex + 1} of {demoApartments.length}
             </div>
@@ -57,7 +71,10 @@ const Swipe = () => {
         <Card className="overflow-hidden">
           <div className="relative">
             {/* Image */}
-            <div className="h-80 bg-muted overflow-hidden">
+            <div 
+              className="h-80 bg-muted overflow-hidden cursor-pointer"
+              onClick={() => setShowImageCarousel(true)}
+            >
               <img
                 src={currentApartment.image_urls[0]}
                 alt={currentApartment.title}
@@ -125,7 +142,7 @@ const Swipe = () => {
               <Button
                 variant="ghost"
                 className="w-full mt-3"
-                onClick={() => navigate(`/apartment/${currentApartment.id}`)}
+                onClick={() => setShowDetailsModal(true)}
               >
                 View Full Details
               </Button>
@@ -143,6 +160,70 @@ const Swipe = () => {
           </div>
         </div>
       </div>
+
+      {/* Image Carousel Modal */}
+      <Dialog open={showImageCarousel} onOpenChange={setShowImageCarousel}>
+        <DialogContent className="max-w-lg p-0">
+          <Carousel className="w-full">
+            <CarouselContent>
+              {currentApartment.image_urls.map((url, index) => (
+                <CarouselItem key={index}>
+                  <div className="h-80 bg-muted overflow-hidden">
+                    <img
+                      src={url}
+                      alt={`${currentApartment.title} - Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </CarouselItem>
+              ))}
+            </CarouselContent>
+            {currentApartment.image_urls.length > 1 && (
+              <>
+                <CarouselPrevious className="left-4" />
+                <CarouselNext className="right-4" />
+              </>
+            )}
+          </Carousel>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details Modal */}
+      <Dialog open={showDetailsModal} onOpenChange={setShowDetailsModal}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{currentApartment.title}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <MapPin className="w-4 h-4" />
+              <span>{currentApartment.address}</span>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <Badge variant="secondary">{currentApartment.room_type}</Badge>
+              <span className="text-lg font-bold">₪{currentApartment.price.toLocaleString()}/month</span>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-2">Description</h4>
+              <p className="text-muted-foreground leading-relaxed">
+                {currentApartment.description}
+              </p>
+            </div>
+            
+            <div>
+              <h4 className="font-semibold mb-2">Details</h4>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Posted:</span>
+                  <span>{new Date(currentApartment.created_at).toLocaleDateString()}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
