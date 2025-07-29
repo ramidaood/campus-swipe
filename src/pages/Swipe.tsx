@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { demoApartments } from "@/data/demoData";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { apartmentsApi } from "@/services/api";
+import type { Apartment } from "@/services/api";
 
 const Swipe = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -15,20 +17,38 @@ const Swipe = () => {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const navigate = useNavigate();
 
-  const currentApartment = demoApartments[currentIndex];
+  // Fetch apartments
+  const { data: apartments = [], isLoading } = useQuery({
+    queryKey: ['apartments'],
+    queryFn: apartmentsApi.getAll,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  const currentApartment = apartments[currentIndex];
 
   const handleSwipe = (liked: boolean) => {
     if (liked && currentApartment) {
       setLikedApartments(prev => [...prev, currentApartment.id]);
     }
     
-    if (currentIndex < demoApartments.length - 1) {
+    if (currentIndex < apartments.length - 1) {
       setCurrentIndex(prev => prev + 1);
     } else {
       // All apartments swiped
       setCurrentIndex(0);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background pb-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading apartments...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!currentApartment) {
     return (
@@ -60,7 +80,7 @@ const Swipe = () => {
               <h1 className="text-2xl font-bold text-foreground">Discover</h1>
             </div>
             <div className="text-sm text-muted-foreground">
-              {currentIndex + 1} of {demoApartments.length}
+              {currentIndex + 1} of {apartments.length}
             </div>
           </div>
         </div>
@@ -75,14 +95,20 @@ const Swipe = () => {
               className="h-80 bg-muted overflow-hidden cursor-pointer"
               onClick={() => setShowImageCarousel(true)}
             >
-              <img
-                src={currentApartment.image_urls[0]}
-                alt={currentApartment.title}
-                className="w-full h-full object-cover"
-              />
+              {currentApartment.image_urls && currentApartment.image_urls.length > 0 ? (
+                <img
+                  src={currentApartment.image_urls[0]}
+                  alt={currentApartment.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-muted flex items-center justify-center">
+                  <MapPin className="w-12 h-12 text-muted-foreground" />
+                </div>
+              )}
               
               {/* Image indicators */}
-              {currentApartment.image_urls.length > 1 && (
+              {currentApartment.image_urls && currentApartment.image_urls.length > 1 && (
                 <div className="absolute top-4 right-4 bg-black/50 text-white px-2 py-1 rounded text-xs">
                   <Camera className="w-3 h-3 inline mr-1" />
                   {currentApartment.image_urls.length}
@@ -155,7 +181,7 @@ const Swipe = () => {
           <div className="w-full bg-muted rounded-full h-2">
             <div 
               className="bg-primary h-2 rounded-full transition-all duration-300"
-              style={{ width: `${((currentIndex + 1) / demoApartments.length) * 100}%` }}
+              style={{ width: `${((currentIndex + 1) / apartments.length) * 100}%` }}
             />
           </div>
         </div>
@@ -166,19 +192,27 @@ const Swipe = () => {
         <DialogContent className="max-w-lg p-0">
           <Carousel className="w-full">
             <CarouselContent>
-              {currentApartment.image_urls.map((url, index) => (
-                <CarouselItem key={index}>
-                  <div className="h-80 bg-muted overflow-hidden">
-                    <img
-                      src={url}
-                      alt={`${currentApartment.title} - Image ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+              {currentApartment.image_urls && currentApartment.image_urls.length > 0 ? (
+                currentApartment.image_urls.map((url, index) => (
+                  <CarouselItem key={index}>
+                    <div className="h-80 bg-muted overflow-hidden">
+                      <img
+                        src={url}
+                        alt={`${currentApartment.title} - Image ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </CarouselItem>
+                ))
+              ) : (
+                <CarouselItem>
+                  <div className="h-80 bg-muted flex items-center justify-center">
+                    <MapPin className="w-12 h-12 text-muted-foreground" />
                   </div>
                 </CarouselItem>
-              ))}
+              )}
             </CarouselContent>
-            {currentApartment.image_urls.length > 1 && (
+            {currentApartment.image_urls && currentApartment.image_urls.length > 1 && (
               <>
                 <CarouselPrevious className="left-4" />
                 <CarouselNext className="right-4" />

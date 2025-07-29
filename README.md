@@ -1,73 +1,225 @@
-# Welcome to your Lovable project
+# Campus Swipe 🏠
 
-## Project info
+A modern, mobile-first apartment discovery app designed specifically for students in Haifa, Israel. Campus Swipe helps students find their perfect accommodation near university campuses through an intuitive swipe interface and comprehensive listing features.
 
-**URL**: https://lovable.dev/projects/0b87e47c-5515-4d42-b1d9-ebf5f41ece69
+## 🚀 Features
 
-## How can I edit this code?
+### Core Functionality
+- **Swipe Interface**: Tinder-like swiping experience for apartment discovery
+- **Map View**: Interactive map showing apartment locations and nearby universities
+- **Favorites System**: Save and manage liked apartments
+- **Detailed Listings**: Comprehensive apartment details with photo galleries
+- **Add Listings**: Submit new apartment listings with photos and details
 
-There are several ways of editing your application.
+### Key Features
+- **Mobile-First Design**: Optimized for mobile devices with responsive UI
+- **Real-time Search**: Filter apartments by location and keywords
+- **Photo Galleries**: Multiple image support with carousel navigation
+- **Location Services**: Map integration for apartment locations
+- **University Proximity**: Focus on apartments near major universities in Haifa
 
-**Use Lovable**
+## 🛠️ Technology Stack
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/0b87e47c-5515-4d42-b1d9-ebf5f41ece69) and start prompting.
+### Frontend
+- **React 18** - Modern React with hooks and functional components
+- **TypeScript** - Type-safe development
+- **Vite** - Fast build tool and development server
+- **React Router DOM** - Client-side routing
+- **TanStack Query** - Data fetching and caching
 
-Changes made via Lovable will be committed automatically to this repo.
+### UI/UX
+- **Tailwind CSS** - Utility-first CSS framework
+- **shadcn/ui** - Beautiful, accessible component library
+- **Radix UI** - Headless UI primitives
+- **Lucide React** - Beautiful icons
+- **Sonner** - Toast notifications
 
-**Use your preferred IDE**
+### Backend & Database
+- **Supabase** - Backend-as-a-Service with PostgreSQL
+- **PostgreSQL** - Reliable database
+- **Real-time subscriptions** - Live data updates
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Development Tools
+- **ESLint** - Code linting
+- **TypeScript** - Type checking
+- **PostCSS** - CSS processing
+- **Autoprefixer** - CSS vendor prefixing
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 📱 App Structure
 
-Follow these steps:
+### Pages
+- **Home** (`/`) - Main dashboard with map/list view and search
+- **Swipe** (`/swipe`) - Tinder-like apartment discovery interface
+- **Favorites** (`/favorites`) - Saved apartments management
+- **Apartment Detail** (`/apartment/:id`) - Detailed apartment view
+- **Add Listing** (`/add`) - Submit new apartment listings
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### Components
+- **BottomNavigation** - Mobile navigation bar
+- **UI Components** - Reusable shadcn/ui components
+- **Data Layer** - Demo data and Supabase integration
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+## 🏗️ Project Structure
 
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+campus-swipe/
+├── src/
+│   ├── components/          # Reusable UI components
+│   │   ├── ui/             # shadcn/ui components
+│   │   └── BottomNavigation.tsx
+│   ├── pages/              # Main application pages
+│   │   ├── Home.tsx        # Dashboard with map/list view
+│   │   ├── Swipe.tsx       # Swipe interface
+│   │   ├── Favorites.tsx   # Saved apartments
+│   │   ├── ApartmentDetail.tsx # Detailed view
+│   │   └── AddListing.tsx  # New listing form
+│   ├── data/               # Data layer
+│   │   └── demoData.ts     # Demo apartment data
+│   ├── integrations/       # External integrations
+│   │   └── supabase/       # Supabase client and types
+│   ├── hooks/              # Custom React hooks
+│   ├── lib/                # Utility functions
+│   └── App.tsx             # Main app component
+├── supabase/               # Supabase configuration
+├── public/                 # Static assets
+└── package.json            # Dependencies and scripts
 ```
 
-**Edit a file directly in GitHub**
+## 🚀 Getting Started
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### Prerequisites
+- Node.js 18+ and npm/yarn
+- Git
 
-**Use GitHub Codespaces**
+### Installation
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1. **Clone the repository**
+   ```bash
+   git clone <your-repo-url>
+   cd campus-swipe
+   ```
 
-## What technologies are used for this project?
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-This project is built with:
+3. **Start the development server**
+   ```bash
+   npm run dev
+   ```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+4. **Open your browser**
+   Navigate to `http://localhost:5173`
 
-## How can I deploy this project?
+### Available Scripts
 
-Simply open [Lovable](https://lovable.dev/projects/0b87e47c-5515-4d42-b1d9-ebf5f41ece69) and click on Share -> Publish.
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run build:dev` - Build for development
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
 
-## Can I connect a custom domain to my Lovable project?
+## 🗄️ Database Schema
 
-Yes, you can!
+The app uses Supabase with the following data structure:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+### Apartments Table
+```typescript
+interface Apartment {
+  id: string;
+  title: string;
+  description: string;
+  price: number;
+  room_type: string;
+  address: string;
+  lat: number;
+  lng: number;
+  image_urls: string[];
+  created_by: string;
+  created_at: string;
+}
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+### Universities/Institutions
+```typescript
+interface Institution {
+  name: string;
+  lat: number;
+  lng: number;
+  type: string;
+}
+```
+
+## 🎨 Design System
+
+The app uses a consistent design system with:
+- **Color Scheme**: Tailwind CSS with dark/light mode support
+- **Typography**: System fonts with proper hierarchy
+- **Spacing**: Consistent spacing using Tailwind's spacing scale
+- **Components**: Reusable shadcn/ui components
+- **Icons**: Lucide React icon set
+
+## 📱 Mobile-First Features
+
+- **Bottom Navigation**: Easy thumb navigation
+- **Swipe Gestures**: Intuitive apartment discovery
+- **Touch-Friendly**: Large touch targets and proper spacing
+- **Responsive Design**: Works on all screen sizes
+- **Progressive Web App**: Can be installed on mobile devices
+
+## 🔧 Development
+
+### Code Style
+- TypeScript for type safety
+- ESLint for code quality
+- Prettier for code formatting
+- Component-based architecture
+
+### State Management
+- React hooks for local state
+- TanStack Query for server state
+- React Router for navigation state
+
+### Testing
+- Component testing with React Testing Library
+- Integration testing for user flows
+- E2E testing with Playwright (planned)
+
+## 🚀 Deployment
+
+### Vercel (Recommended)
+1. Connect your GitHub repository
+2. Configure build settings
+3. Deploy automatically on push
+
+### Netlify
+1. Connect repository
+2. Set build command: `npm run build`
+3. Set publish directory: `dist`
+
+### Manual Deployment
+```bash
+npm run build
+# Upload dist/ folder to your hosting provider
+```
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🆘 Support
+
+For support, please open an issue in the GitHub repository or contact the development team.
+
+---
+
+**Built with ❤️ for students in Haifa**

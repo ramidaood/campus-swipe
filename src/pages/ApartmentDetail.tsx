@@ -5,20 +5,39 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { demoApartments } from "@/data/demoData";
+import { useQuery } from "@tanstack/react-query";
+import { apartmentsApi } from "@/services/api";
+import type { Apartment } from "@/services/api";
 
 const ApartmentDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isLiked, setIsLiked] = useState(false);
 
-  const apartment = demoApartments.find(apt => apt.id === id);
+  // Fetch apartment details
+  const { data: apartment, isLoading, error } = useQuery({
+    queryKey: ['apartment', id],
+    queryFn: () => apartmentsApi.getById(id!),
+    enabled: !!id,
+  });
 
-  if (!apartment) {
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background pb-20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading apartment details...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !apartment) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold mb-2">Apartment not found</h2>
+          <p className="text-muted-foreground mb-4">The apartment you're looking for doesn't exist.</p>
           <Button onClick={() => navigate("/")}>Back to Home</Button>
         </div>
       </div>
@@ -59,19 +78,27 @@ const ApartmentDetail = () => {
       <div className="relative">
         <Carousel className="w-full">
           <CarouselContent>
-            {apartment.image_urls.map((url, index) => (
-              <CarouselItem key={index}>
-                <div className="h-80 bg-muted overflow-hidden">
-                  <img
-                    src={url}
-                    alt={`${apartment.title} - Image ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
+            {apartment.image_urls && apartment.image_urls.length > 0 ? (
+              apartment.image_urls.map((url, index) => (
+                <CarouselItem key={index}>
+                  <div className="h-80 bg-muted overflow-hidden">
+                    <img
+                      src={url}
+                      alt={`${apartment.title} - Image ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                </CarouselItem>
+              ))
+            ) : (
+              <CarouselItem>
+                <div className="h-80 bg-muted flex items-center justify-center">
+                  <MapPin className="w-12 h-12 text-muted-foreground" />
                 </div>
               </CarouselItem>
-            ))}
+            )}
           </CarouselContent>
-          {apartment.image_urls.length > 1 && (
+          {apartment.image_urls && apartment.image_urls.length > 1 && (
             <>
               <CarouselPrevious className="left-4" />
               <CarouselNext className="right-4" />
