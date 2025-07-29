@@ -1,29 +1,48 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader2, MapPin } from 'lucide-react';
-import { mapsService } from '@/services/maps';
+import { mapsService, POIType } from '@/services/maps';
 import MapMarkers from './MapMarkers';
+import { POIMarkers } from './POIMarkers';
 import type { Apartment, Institution } from '@/services/api';
 
 interface MapProps {
   apartments?: Apartment[];
   institutions?: Institution[];
+  selectedApartment?: Apartment | null;
+  selectedUniversity?: Institution | null;
+  showPOIs?: boolean;
+  showDirections?: boolean;
+  enabledPOITypes?: POIType[];
   center?: { lat: number; lng: number };
   zoom?: number;
   height?: string;
-  onMarkerClick?: (apartment: Apartment) => void;
+  onMarkerClick?: (apartment: Apartment, event?: MouseEvent) => void;
   onInstitutionClick?: (institution: Institution) => void;
+  onPOIClick?: (poi: any) => void;
+  onDirectionsUpdate?: (directions: {
+    duration: string;
+    distance: string;
+    steps: google.maps.DirectionsStep[];
+  } | null) => void;
   className?: string;
 }
 
 export default function Map({
   apartments = [],
   institutions = [],
+  selectedApartment = null,
+  selectedUniversity = null,
+  showPOIs = false,
+  showDirections = false,
+  enabledPOITypes = [],
   center = { lat: 32.794167, lng: 34.989167 }, // Haifa center
   zoom = 12,
   height = '400px',
   onMarkerClick,
   onInstitutionClick,
+  onPOIClick,
+  onDirectionsUpdate,
   className = ''
 }: MapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
@@ -69,6 +88,7 @@ export default function Map({
 
         setMap(mapInstance);
         console.log("✅ Map component - Map created successfully");
+        console.log("✅ Map component - Clean styles applied");
       } catch (err) {
         console.error('❌ Map component - Failed to initialize map:', err);
         const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -130,9 +150,26 @@ export default function Map({
           map={map}
           apartments={apartments}
           institutions={institutions}
+          selectedApartment={selectedApartment}
+          selectedUniversity={selectedUniversity}
+          showPOIs={showPOIs}
+          showDirections={showDirections}
           onMarkerClick={onMarkerClick}
           onInstitutionClick={onInstitutionClick}
+          onDirectionsUpdate={onDirectionsUpdate}
         />
+
+        {/* POI Markers component */}
+        {showPOIs && enabledPOITypes.length > 0 && (
+          <POIMarkers
+            map={map}
+            google={mapsService.getGoogle()}
+            center={center}
+            enabledTypes={enabledPOITypes}
+            radius={1000}
+            onPOIClick={onPOIClick}
+          />
+        )}
       </div>
     </div>
   );

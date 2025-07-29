@@ -1,22 +1,46 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Apartment, Institution } from '@/services/api';
+import { mapsService, POI_TYPES, type POIType } from '@/services/maps';
 
 interface MapMarkersProps {
   map: google.maps.Map | null;
   apartments: Apartment[];
   institutions: Institution[];
-  onMarkerClick?: (apartment: Apartment) => void;
+  selectedApartment: Apartment | null;
+  selectedUniversity: Institution | null;
+  showPOIs: boolean;
+  showDirections: boolean;
+  onMarkerClick?: (apartment: Apartment, event?: MouseEvent) => void;
   onInstitutionClick?: (institution: Institution) => void;
+  onDirectionsUpdate?: (directions: {
+    duration: string;
+    distance: string;
+    steps: google.maps.DirectionsStep[];
+  } | null) => void;
 }
 
 const MapMarkers = ({ 
   map, 
   apartments, 
   institutions, 
+  selectedApartment,
+  selectedUniversity,
+  showPOIs,
+  showDirections,
   onMarkerClick, 
-  onInstitutionClick 
+  onInstitutionClick,
+  onDirectionsUpdate
 }: MapMarkersProps) => {
   const markersRef = useRef<any[]>([]);
+  const poiMarkersRef = useRef<any[]>([]);
+  const directionsRendererRef = useRef<google.maps.DirectionsRenderer | null>(null);
+  const [nearbyPOIs, setNearbyPOIs] = useState<Array<{
+    lat: number;
+    lng: number;
+    name: string;
+    type: POIType;
+    placeId?: string;
+  }>>([]);
 
   // Clear all markers with conditional checks
   const clearMarkers = () => {
@@ -34,7 +58,124 @@ const MapMarkers = ({
     markersRef.current = [];
   };
 
-  // Add markers to map
+  // Clear POI markers
+  const clearPOIMarkers = () => {
+    poiMarkersRef.current.forEach(marker => {
+      try {
+        if (marker && marker.map && marker.position) {
+          console.log("🗑️ Clearing POI marker:", marker.title || 'unknown');
+          marker.map = null;
+        }
+      } catch (error) {
+        console.warn("⚠️ Error clearing POI marker:", error);
+      }
+    });
+    poiMarkersRef.current = [];
+  };
+
+  // Clear directions
+  const clearDirections = () => {
+    if (directionsRendererRef.current) {
+      directionsRendererRef.current.setMap(null);
+      directionsRendererRef.current = null;
+    }
+  };
+
+  // Search for nearby POIs when apartment is selected
+  useEffect(() => {
+    if (!map || !selectedApartment || !showPOIs) {
+      clearPOIMarkers();
+      setNearbyPOIs([]);
+      return;
+    }
+
+    const searchPOIs = async () => {
+      try {
+        console.log("🔍 Searching for nearby POIs around:", selectedApartment.title);
+        console.log("🔍 Location:", selectedApartment.lat, selectedApartment.lng);
+        const pois = await mapsService.searchNearbyPOIs(
+          { lat: selectedApartment.lat, lng: selectedApartment.lng },
+          1000 // 1km radius
+        );
+        console.log("🔍 POI search results:", pois);
+        setNearbyPOIs(pois);
+        console.log(`✅ Found ${pois.length} nearby POIs`);
+      } catch (error) {
+        console.warn("⚠️ Error searching for POIs:", error);
+        setNearbyPOIs([]);
+      }
+    };
+
+    searchPOIs();
+  }, [map, selectedApartment, showPOIs]);
+
+  // Add POI markers when nearby POIs change
+  useEffect(() => {
+    if (!map || !showPOIs || nearbyPOIs.length === 0) {
+      clearPOIMarkers();
+      return;
+    }
+
+    console.log("📍 Adding POI markers to map...");
+    console.log("📍 POIs to add:", nearbyPOIs);
+    clearPOIMarkers();
+
+    try {
+      const newPOIMarkers = mapsService.addPOIMarkers(map, nearbyPOIs);
+      poiMarkersRef.current = newPOIMarkers;
+      console.log(`✅ Added ${newPOIMarkers.length} POI markers to map`);
+    } catch (error) {
+      console.error('❌ Error adding POI markers:', error);
+    }
+  }, [map, nearbyPOIs, showPOIs]);
+
+  // Get directions when apartment and university are selected
+  useEffect(() => {
+    if (!map || !selectedApartment || !selectedUniversity || !showDirections) {
+      clearDirections();
+      onDirectionsUpdate?.(null);
+      return;
+    }
+
+    const getDirections = async () => {
+      try {
+        console.log("🗺️ Getting directions from", selectedApartment.title, "to", selectedUniversity.name);
+        
+        const directions = await mapsService.getDirections(
+          { lat: selectedApartment.lat, lng: selectedApartment.lng },
+          { lat: selectedUniversity.lat, lng: selectedUniversity.lng }
+        );
+
+        // Render directions on map
+        clearDirections();
+        const directionsRenderer = mapsService.renderDirections(map, {
+          routes: [directions.route!],
+          request: {
+            origin: { lat: selectedApartment.lat, lng: selectedApartment.lng },
+            destination: { lat: selectedUniversity.lat, lng: selectedUniversity.lng },
+            travelMode: google.maps.TravelMode.TRANSIT
+          }
+        });
+        directionsRendererRef.current = directionsRenderer;
+
+        // Update UI with directions info
+        onDirectionsUpdate?.({
+          duration: directions.duration,
+          distance: directions.distance,
+          steps: directions.steps
+        });
+
+        console.log(`✅ Directions: ${directions.duration} (${directions.distance})`);
+      } catch (error) {
+        console.warn("⚠️ Error getting directions:", error);
+        onDirectionsUpdate?.(null);
+      }
+    };
+
+    getDirections();
+  }, [map, selectedApartment, selectedUniversity, showDirections, onDirectionsUpdate]);
+
+  // Add apartment and institution markers to map (only when explicitly requested)
   useEffect(() => {
     if (!map || !google) return;
 
@@ -46,116 +187,16 @@ const MapMarkers = ({
     const newMarkers: any[] = [];
 
     try {
-      // Add apartment markers
-      apartments.forEach(apartment => {
-        console.log("📍 Adding apartment marker:", apartment.title, "at", apartment.lat, apartment.lng);
-        
-        // Create custom marker element
-        const markerElement = document.createElement('div');
-        markerElement.innerHTML = `
-          <div style="
-            width: 32px; 
-            height: 32px; 
-            background: #3B82F6; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          ">
-            🏠
-          </div>
-        `;
-        
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          position: { lat: apartment.lat, lng: apartment.lng },
-          map,
-          title: apartment.title,
-          content: markerElement
-        });
+      // Only add apartment markers if showApartments is true (we'll add this prop later)
+      // For now, let's not add any apartment markers to keep the map clean
+      console.log("📍 Skipping apartment markers for clean map view");
 
-        // Add click listener
-        marker.addListener('click', () => {
-          console.log("📍 Apartment marker clicked:", apartment.title);
-          onMarkerClick?.(apartment);
-        });
-
-        // Add info window
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="padding: 8px; max-width: 200px;">
-              <h3 style="margin: 0 0 4px 0; font-size: 14px; font-weight: bold;">${apartment.title}</h3>
-              <p style="margin: 0 0 4px 0; font-size: 12px; color: #666;">${apartment.address}</p>
-              <p style="margin: 0; font-size: 14px; font-weight: bold; color: #3B82F6;">₪${apartment.price.toLocaleString()}/mo</p>
-            </div>
-          `
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-
-        newMarkers.push(marker);
-      });
-
-      // Add institution markers
-      institutions.forEach(institution => {
-        console.log("🏫 Adding institution marker:", institution.name, "at", institution.lat, institution.lng);
-        
-        // Create custom marker element
-        const markerElement = document.createElement('div');
-        markerElement.innerHTML = `
-          <div style="
-            width: 32px; 
-            height: 32px; 
-            background: #10B981; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-          ">
-            🏫
-          </div>
-        `;
-        
-        const marker = new google.maps.marker.AdvancedMarkerElement({
-          position: { lat: institution.lat, lng: institution.lng },
-          map,
-          title: institution.name,
-          content: markerElement
-        });
-
-        // Add click listener
-        marker.addListener('click', () => {
-          console.log("🏫 Institution marker clicked:", institution.name);
-          onInstitutionClick?.(institution);
-        });
-
-        // Add info window
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="padding: 8px; max-width: 200px;">
-              <h3 style="margin: 0; font-size: 14px; font-weight: bold; color: #10B981;">${institution.name}</h3>
-            </div>
-          `
-        });
-
-        marker.addListener('click', () => {
-          infoWindow.open(map, marker);
-        });
-
-        newMarkers.push(marker);
-      });
+      // Only add institution markers if showInstitutions is true
+      // For now, let's not add any institution markers to keep the map clean
+      console.log("📍 Skipping institution markers for clean map view");
 
       markersRef.current = newMarkers;
-      console.log(`✅ Added ${newMarkers.length} markers to map`);
+      console.log(`✅ Added ${newMarkers.length} markers to map (clean view)`);
     } catch (err) {
       console.error('❌ Error adding markers:', err);
     }
@@ -166,10 +207,10 @@ const MapMarkers = ({
     return () => {
       console.log("🧹 MapMarkers - Cleaning up on unmount");
       clearMarkers();
+      clearPOIMarkers();
+      clearDirections();
     };
   }, []);
-
-
 
   // This component doesn't render anything visible
   return null;

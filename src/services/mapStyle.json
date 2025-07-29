@@ -1,0 +1,32 @@
+[
+    {
+      "featureType": "poi",
+      "elementType": "all",
+      "stylers": [{ "visibility": "off" }]
+    },
+    {
+      "featureType": "transit",
+      "elementType": "all",
+      "stylers": [{ "visibility": "off" }]
+    },
+    {
+      "featureType": "road",
+      "elementType": "all",
+      "stylers": [{ "visibility": "on" }]
+    },
+    {
+      "featureType": "landscape",
+      "elementType": "all",
+      "stylers": [{ "visibility": "on" }]
+    },
+    {
+      "featureType": "water",
+      "elementType": "all",
+      "stylers": [{ "visibility": "on" }]
+    },
+    {
+      "featureType": "administrative",
+      "elementType": "all",
+      "stylers": [{ "visibility": "on" }]
+    }
+  ]

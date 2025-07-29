@@ -9,7 +9,9 @@ import { useQuery } from "@tanstack/react-query";
 import { apartmentsApi, institutionsApi } from "@/services/api";
 import Map from "@/components/Map";
 import MapMarkerOverlay from "@/components/MapMarkerOverlay";
+import MapControls from "@/components/MapControls";
 import { useAuth } from "@/contexts/AuthContext";
+import { POIType } from "@/services/maps";
 import type { Apartment, Institution } from "@/services/api";
 
 const Home = () => {
@@ -17,6 +19,17 @@ const Home = () => {
   const [showOverlay, setShowOverlay] = useState(false);
   const [selectedApartment, setSelectedApartment] = useState<Apartment | null>(null);
   const [showMarkerOverlay, setShowMarkerOverlay] = useState(false);
+  const [markerPosition, setMarkerPosition] = useState<{ x: number; y: number } | null>(null);
+  const [selectedUniversity, setSelectedUniversity] = useState<Institution | null>(null);
+  const [showPOIs, setShowPOIs] = useState(false);
+  const [showDirections, setShowDirections] = useState(false);
+  const [showApartments, setShowApartments] = useState(false);
+  const [enabledPOITypes, setEnabledPOITypes] = useState<POIType[]>(['supermarket', 'restaurant', 'transit_station']);
+  const [directions, setDirections] = useState<{
+    duration: string;
+    distance: string;
+    steps: google.maps.DirectionsStep[];
+  } | null>(null);
   const { user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -69,9 +82,26 @@ const Home = () => {
     apartment.address.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleApartmentClick = (apartment: Apartment) => {
+  const handleApartmentClick = (apartment: Apartment, event?: MouseEvent) => {
+    console.log("🏠 Home - Apartment clicked:", apartment.title);
+    console.log("🏠 Home - Event position:", event?.clientX, event?.clientY);
+    
     setSelectedApartment(apartment);
     setShowMarkerOverlay(true);
+    
+    // Capture click position for overlay positioning
+    if (event) {
+      setMarkerPosition({ x: event.clientX, y: event.clientY });
+      console.log("🏠 Home - Set marker position:", event.clientX, event.clientY);
+    } else {
+      // Fallback to center if no event provided
+      setMarkerPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+      console.log("🏠 Home - Set fallback position");
+    }
+    
+    // Enable POIs and directions when an apartment is selected
+    setShowPOIs(true);
+    setShowDirections(true);
   };
 
   const handleInstitutionClick = (institution: Institution) => {
@@ -160,12 +190,19 @@ const Home = () => {
       {/* Full Screen Map */}
       <div className="relative h-screen w-full">
         <Map
-          apartments={filteredApartments}
+          apartments={showApartments ? filteredApartments : []}
           institutions={institutions}
+          selectedApartment={selectedApartment}
+          selectedUniversity={selectedUniversity}
+          showPOIs={showPOIs}
+          showDirections={showDirections}
+          enabledPOITypes={enabledPOITypes}
           height="100vh"
           className="w-full h-full"
           onMarkerClick={handleApartmentClick}
           onInstitutionClick={handleInstitutionClick}
+          onPOIClick={(poi) => console.log('📍 POI clicked:', poi)}
+          onDirectionsUpdate={setDirections}
         />
         
         {/* Backdrop Overlay */}
@@ -211,92 +248,187 @@ const Home = () => {
             
             {/* Overlay Content */}
             <div className="overflow-y-auto h-[calc(100vh-140px)]">
-              {filteredApartments.length === 0 ? (
-                <div className="p-6 text-center">
-                  <MapPin className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">
-                    {searchTerm ? 'No apartments found matching your search.' : 'No apartments available at the moment.'}
-                  </p>
-                  {apartmentsError && (
-                    <p className="text-sm text-destructive mt-2">
-                      Error loading apartments. Please try again later.
+              {/* Map Controls */}
+              <div className="p-4 border-b border-border">
+                <MapControls
+                  institutions={institutions}
+                  selectedApartment={selectedApartment}
+                  selectedUniversity={selectedUniversity}
+                  onUniversitySelect={setSelectedUniversity}
+                  showPOIs={showPOIs}
+                  onTogglePOIs={setShowPOIs}
+                  showApartments={showApartments}
+                  onToggleApartments={setShowApartments}
+                  enabledPOITypes={enabledPOITypes}
+                  onTogglePOIType={(type, enabled) => {
+                    if (enabled) {
+                      setEnabledPOITypes(prev => [...prev, type]);
+                    } else {
+                      setEnabledPOITypes(prev => prev.filter(t => t !== type));
+                    }
+                  }}
+                  directions={directions}
+                />
+              </div>
+
+              {/* Apartments List */}
+              <div className="p-4">
+                <h3 className="font-semibold text-sm mb-3">Available Apartments ({filteredApartments.length})</h3>
+                {filteredApartments.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MapPin className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm">
+                      {searchTerm ? 'No apartments found matching your search.' : 'No apartments available at the moment.'}
                     </p>
-                  )}
-                </div>
-              ) : (
-                <div className="p-4 space-y-3">
-                  {filteredApartments.map((apartment) => (
-                    <Card 
-                      key={apartment.id} 
-                      className="cursor-pointer hover:shadow-md transition-shadow border-0 shadow-sm"
-                      onClick={() => navigate(`/apartment/${apartment.id}`)}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex gap-3">
-                          <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
-                            {apartment.image_urls && apartment.image_urls.length > 0 ? (
-                              <img
-                                src={apartment.image_urls[0]}
-                                alt={apartment.title}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-full h-full bg-muted flex items-center justify-center">
-                                <MapPin className="w-4 h-4 text-muted-foreground" />
+                    {apartmentsError && (
+                      <p className="text-sm text-destructive mt-2">
+                        Error loading apartments. Please try again later.
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredApartments.map((apartment) => (
+                      <Card 
+                        key={apartment.id} 
+                        className="cursor-pointer hover:shadow-md transition-shadow border-0 shadow-sm"
+                        onClick={() => navigate(`/apartment/${apartment.id}`)}
+                      >
+                        <CardContent className="p-3">
+                          <div className="flex gap-3">
+                            <div className="w-16 h-16 bg-muted rounded-lg overflow-hidden flex-shrink-0">
+                              {apartment.image_urls && apartment.image_urls.length > 0 ? (
+                                <img
+                                  src={apartment.image_urls[0]}
+                                  alt={apartment.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full bg-muted flex items-center justify-center">
+                                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                                </div>
+                              )}
+                            </div>
+                            
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-start justify-between mb-1">
+                                <h4 className="font-medium text-foreground truncate text-sm">
+                                  {apartment.title}
+                                </h4>
+                                <Badge variant="secondary" className="ml-2 flex-shrink-0 text-xs">
+                                  {apartment.room_type}
+                                </Badge>
                               </div>
-                            )}
-                          </div>
-                          
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-start justify-between mb-1">
-                              <h4 className="font-medium text-foreground truncate text-sm">
-                                {apartment.title}
-                              </h4>
-                              <Badge variant="secondary" className="ml-2 flex-shrink-0 text-xs">
-                                {apartment.room_type}
-                              </Badge>
-                            </div>
-                            
-                            <p className="text-xs text-muted-foreground mb-1 line-clamp-1">
-                              {apartment.address}
-                            </p>
-                            
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-semibold text-primary">
-                                ₪{apartment.price.toLocaleString()}/mo
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {apartment.bedrooms} bed • {apartment.bathrooms} bath
-                              </span>
+                              
+                              <p className="text-xs text-muted-foreground mb-1 line-clamp-1">
+                                {apartment.address}
+                              </p>
+                              
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-semibold text-primary">
+                                  ₪{apartment.price.toLocaleString()}/mo
+                                </span>
+                                <span className="text-xs text-muted-foreground">
+                                  {apartment.room_type}
+                                </span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              )}
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         
         {/* Floating Action Button for Mobile */}
-        <Button
-          variant="default"
-          size="lg"
-          onClick={() => setShowOverlay(!showOverlay)}
-          className="fixed bottom-6 left-6 z-30 shadow-lg md:hidden bg-background/95 backdrop-blur"
-        >
-          <MapPin className="w-5 h-5 mr-2" />
-          {showOverlay ? "Hide" : "Listings"}
-        </Button>
+                  <Button
+            variant="default"
+            size="lg"
+            onClick={() => setShowOverlay(!showOverlay)}
+            className="fixed bottom-6 left-6 z-30 shadow-lg md:hidden bg-background/95 backdrop-blur"
+          >
+            <MapPin className="w-5 h-5 mr-2" />
+            {showOverlay ? "Hide" : "Listings"}
+          </Button>
+
+          {/* Test overlay positioning */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log("🧪 Test button clicked");
+              if (apartments.length > 0) {
+                setSelectedApartment(apartments[0]);
+                setShowMarkerOverlay(true);
+                setMarkerPosition({ x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                console.log("🧪 Test overlay triggered");
+              } else {
+                console.log("🧪 No apartments available for test");
+              }
+            }}
+            className="fixed bottom-6 right-6 z-30 shadow-lg md:hidden bg-background/95 backdrop-blur"
+          >
+            Test Overlay
+          </Button>
+
+          {/* Toggle Apartments */}
+          <Button
+            variant={showApartments ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setShowApartments(!showApartments);
+              console.log("🏠 Toggle apartments:", !showApartments);
+            }}
+            className="fixed bottom-20 right-6 z-30 shadow-lg md:hidden bg-background/95 backdrop-blur"
+          >
+            {showApartments ? "Hide Apartments" : "Show Apartments"}
+          </Button>
+
+          {/* Toggle POIs */}
+          <Button
+            variant={showPOIs ? "default" : "outline"}
+            size="sm"
+            onClick={() => {
+              setShowPOIs(!showPOIs);
+              console.log("📍 Toggle POIs:", !showPOIs);
+            }}
+            className="fixed bottom-32 right-6 z-30 shadow-lg md:hidden bg-background/95 backdrop-blur"
+          >
+            {showPOIs ? "Hide POIs" : "Show POIs"}
+          </Button>
+
+          {/* Test POI functionality */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              console.log("🧪 Test POI button clicked");
+              if (apartments.length > 0) {
+                setSelectedApartment(apartments[0]);
+                setShowPOIs(true);
+                setShowDirections(true);
+                console.log("🧪 Test POI triggered");
+              } else {
+                console.log("🧪 No apartments available for POI test");
+              }
+            }}
+            className="fixed bottom-44 right-6 z-30 shadow-lg md:hidden bg-background/95 backdrop-blur"
+          >
+            Test POI
+          </Button>
 
         {/* Map Marker Overlay */}
         <MapMarkerOverlay
           apartment={selectedApartment}
           isVisible={showMarkerOverlay}
+          markerPosition={markerPosition}
           onClose={() => {
             setShowMarkerOverlay(false);
             setSelectedApartment(null);
+            setMarkerPosition(null);
           }}
         />
       </div>

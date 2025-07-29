@@ -17,6 +17,7 @@ import AuthTest from "./pages/AuthTest";
 import MapTest from "./pages/MapTest";
 import MapFilterTest from "./components/MapFilterTest";
 import ComprehensiveTest from "./pages/ComprehensiveTest";
+import EnhancedMapTest from "./pages/EnhancedMapTest";
 import NotFound from "./pages/NotFound";
 import BottomNavigation from "./components/BottomNavigation";
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/map-test" element={<MapTest />} />
               <Route path="/map-filter-test" element={<MapFilterTest />} />
               <Route path="/comprehensive-test" element={<ComprehensiveTest />} />
+              <Route path="/enhanced-map-test" element={<EnhancedMapTest />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
